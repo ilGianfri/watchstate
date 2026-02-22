@@ -152,7 +152,7 @@ final class GetUsersList
                     'Accept' => 'application/json',
                 ],
             ]);
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException|iException $e) {
             return new Response(
                 status: false,
                 error: new Error(
@@ -340,7 +340,7 @@ final class GetUsersList
             if (true !== (bool) ag($opts, Options::GET_TOKENS) || count($users) < 1) {
                 return new Response(status: true, response: $users);
             }
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException|iException $e) {
             return new Response(
                 status: false,
                 error: new Error(
@@ -377,7 +377,7 @@ final class GetUsersList
                     'Accept' => 'application/xml',
                 ],
             ]);
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException|iException $e) {
             return new Response(
                 status: false,
                 error: new Error(

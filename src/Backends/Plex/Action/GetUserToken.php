@@ -88,7 +88,7 @@ final class GetUserToken
                 'url' => (string) $url,
             ]);
 
-            $opts['user_info'] = ['username' => $username];
+            $opts['user_info'] = ['username' => $username, 'user_id' => $userId];
 
             $response = $this->request(Method::POST, $url, Status::CREATED, $context, array_replace_recursive([
                 'headers' => ['Accept' => 'application/json'],
@@ -140,6 +140,10 @@ final class GetUserToken
                     'X-Plex-Token' => $tempToken,
                 ],
             ], $opts));
+
+            if (true === $response instanceof Response) {
+                return $response;
+            }
 
             $json = json_decode(
                 json: $response->getContent(),
