@@ -918,6 +918,8 @@ const getAccessToken = async (): Promise<boolean | undefined> => {
 const getUsers = async (
   showAlert: boolean = true,
   forceReload: boolean = false,
+  withTokens: boolean = false,
+  targetUser: string | null = null,
 ): Promise<Array<BackendUser> | undefined> => {
   const required_values = ['type', 'token', 'url', 'uuid'];
 
@@ -963,7 +965,12 @@ const getUsers = async (
     }
 
     const query = new URLSearchParams();
-    query.append('tokens', '1');
+    if (withTokens) {
+      query.append('tokens', '1');
+      if (targetUser) {
+        query.append('target_user', targetUser);
+      }
+    }
     if (forceReload) {
       query.append('no_cache', '1');
     }
@@ -1091,6 +1098,30 @@ const changeStep = async (): Promise<void> => {
       return;
     }
 
+    if ('plex' === backend.value.type) {
+      const selected = users.value.find((u) => u.id === backend.value.user);
+      if (!selected) {
+        notification('error', 'Error', 'Selected user not found.');
+        return;
+      }
+
+      const usersResponse = await getUsers(true, true, true, selected.uuid ?? selected.id);
+      const updated = usersResponse?.find((u) => u.id === selected.id);
+      const token = updated?.token ?? selected.token;
+
+      if (!token) {
+        notification('error', 'Error', 'Selected user does not have a valid token.');
+        return;
+      }
+
+      if (!backend.value.options?.ADMIN_TOKEN) {
+        backend.value.options.ADMIN_TOKEN = backend.value.token;
+      }
+      backend.value.token = token;
+      backend.value.options.plex_user_name = updated?.name ?? selected.name;
+      backend.value.options.plex_user_uuid = updated?.uuid ?? selected.uuid ?? '';
+    }
+
     stage.value = 4;
   }
 
@@ -1112,10 +1143,17 @@ const addBackend = async (): Promise<boolean> => {
   }
 
   if ('plex' === backend.value.type) {
-    const token = users.value.find((u) => u.id === backend.value.user)?.token;
+    const selectedUser = users.value.find((u) => u.id === backend.value.user);
+    const token = selectedUser?.token;
     if (token && token !== backend.value.token) {
-      backend.value.options.ADMIN_TOKEN = backend.value.token;
+      if (!backend.value.options?.ADMIN_TOKEN) {
+        backend.value.options.ADMIN_TOKEN = backend.value.token;
+      }
       backend.value.token = token;
+    }
+    if (selectedUser) {
+      backend.value.options.plex_user_name = selectedUser.name;
+      backend.value.options.plex_user_uuid = selectedUser.uuid ?? '';
     }
   }
 

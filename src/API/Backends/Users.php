@@ -36,6 +36,10 @@ final class Users
             $opts[Options::GET_TOKENS] = true;
         }
 
+        if (null !== ($user = $params->get(Options::TARGET_USER, null))) {
+            $opts[Options::TARGET_USER] = $user;
+        }
+
         if (true === (bool) $params->get('no_cache', false)) {
             $opts[Options::NO_CACHE] = true;
         }

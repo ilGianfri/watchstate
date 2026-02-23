@@ -219,6 +219,12 @@ final class GetUsersList
 
         $external = $users->isSuccessful() ? $users->response : [];
 
+        if (null !== ($targetUser = ag($opts, Options::TARGET_USER, null))) {
+            if ('' === ($targetUser = (string) $targetUser)) {
+                $targetUser = null;
+            }
+        }
+
         $list = [];
 
         foreach (ag($json, 'users', []) as $data) {
@@ -243,23 +249,32 @@ final class GetUsersList
             ];
 
             if (true === (bool) ag($opts, Options::GET_TOKENS)) {
-                $tokenRequest = Container::getNew(GetUserToken::class)(
-                    context: $context,
-                    userId: ag($data, 'uuid'),
-                    username: ag($data, 'name'),
-                );
+                $matchesTarget =
+                    null === $targetUser
+                    || (string) $targetUser === (string) ag($data, 'id')
+                    || (string) $targetUser === (string) ag($data, 'uuid');
 
-                if ($tokenRequest->hasError() && $tokenRequest->error) {
-                    $this->logger->log(
-                        $tokenRequest->error->level(),
-                        $tokenRequest->error->message,
-                        $tokenRequest->error->context,
+                if (true === $matchesTarget) {
+                    $tokenRequest = Container::getNew(GetUserToken::class)(
+                        context: $context,
+                        userId: ag($data, 'uuid'),
+                        username: ag($data, 'name'),
                     );
-                }
 
-                $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
-                if (true === $tokenRequest->hasError() && $tokenRequest->error) {
-                    $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
+                    if ($tokenRequest->hasError() && $tokenRequest->error) {
+                        $this->logger->log(
+                            $tokenRequest->error->level(),
+                            $tokenRequest->error->message,
+                            $tokenRequest->error->context,
+                        );
+                    }
+
+                    $data['token'] = $tokenRequest->isSuccessful() ? $tokenRequest->response : null;
+                    if (true === $tokenRequest->hasError() && $tokenRequest->error) {
+                        $data['token_error'] = ag($tokenRequest->error->extra, 'error', $tokenRequest->error->format());
+                    }
+                } elseif (null !== $targetUser) {
+                    $data['token'] = null;
                 }
             }
 

@@ -358,6 +358,17 @@
                         <span class="is-hidden-mobile">Reload</span>
                       </button>
                     </div>
+                    <div class="control" v-if="'plex' === backend.type && !isLimitedToken">
+                      <button
+                        class="button is-info"
+                        type="button"
+                        :disabled="usersLoading || !backend.user"
+                        @click="() => generateUserToken()"
+                      >
+                        <span class="icon"><i class="fas fa-key" /></span>
+                        <span class="is-hidden-mobile">Generate Token</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <p class="help">
@@ -781,7 +792,12 @@ const getUUid = async (): Promise<void> => {
   backend.value.uuid = json.identifier;
 };
 
-const getUsers = async (showAlert: boolean = true, forceReload: boolean = false): Promise<void> => {
+const getUsers = async (
+  showAlert: boolean = true,
+  forceReload: boolean = false,
+  withTokens: boolean = false,
+  targetUser: string | null = null,
+): Promise<Array<BackendEditUser> | undefined> => {
   const required_values: Array<keyof Backend> = ['type', 'token', 'url', 'uuid'];
 
   if (required_values.some((v) => !backend.value[v])) {
@@ -814,7 +830,12 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
   });
 
   const query = new URLSearchParams();
-  query.append('tokens', '1');
+  if (withTokens) {
+    query.append('tokens', '1');
+    if (targetUser) {
+      query.append('target_user', targetUser);
+    }
+  }
   if (forceReload) {
     query.append('no_cache', '1');
   }
@@ -842,6 +863,37 @@ const getUsers = async (showAlert: boolean = true, forceReload: boolean = false)
   }
 
   users.value = json;
+  return users.value;
+};
+
+const generateUserToken = async (): Promise<void> => {
+  if ('plex' !== backend.value.type) {
+    return;
+  }
+
+  if (!backend.value.user) {
+    notification('error', 'Error', 'Select a user to generate a token.');
+    return;
+  }
+
+  const selectedUser = users.value.find((user) => user.id === backend.value.user);
+  if (!selectedUser) {
+    notification('error', 'Error', 'Selected user not found.');
+    return;
+  }
+
+  const usersResponse = await getUsers(true, true, true, selectedUser.uuid ?? selectedUser.id);
+  const updated = usersResponse?.find((user) => user.id === selectedUser.id);
+  const token = updated?.token ?? selectedUser.token;
+  if (!token) {
+    notification('error', 'Error', 'User token not found');
+    return;
+  }
+
+  if (!backend.value.options?.ADMIN_TOKEN) {
+    backend.value.options.ADMIN_TOKEN = backend.value.token;
+  }
+  backend.value.token = token;
 };
 
 // -- if users updated we need to reset the token in-case the plex auth changed
@@ -870,12 +922,14 @@ watch(
 
     // Check if the user has a token
     if (!selectedUser.token) {
-      notification('error', 'Error', 'Selected user does not have a valid token');
       return;
     }
 
     // Only update if the token has actually changed
     if (selectedUser.token !== backend.value.token) {
+      if (!backend.value.options?.ADMIN_TOKEN) {
+        backend.value.options.ADMIN_TOKEN = backend.value.token;
+      }
       backend.value.token = selectedUser.token;
       notification('info', 'Information', `Token updated for user: ${selectedUser.name}`);
     }
@@ -1014,11 +1068,11 @@ watch(
     backend.value.options.plex_user_uuid = selectedUser.uuid;
 
     if (!selectedUser.token) {
-      notification('error', 'Error', 'User token not found');
       return;
     }
 
     if (selectedUser.token !== backend.value.token) {
+      backend.value.options.ADMIN_TOKEN = backend.value.token;
       backend.value.token = selectedUser.token;
       notification('info', 'Information', `Token updated for user: ${selectedUser.name}`);
     }

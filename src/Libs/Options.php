@@ -52,6 +52,7 @@ final class Options
     public const string ALT_NAME = 'ALT_NAME';
     public const string ALT_ID = 'ALT_ID';
     public const string CONTEXT_USER = 'CONTEXT_USER';
+    public const string TARGET_USER = 'target_user';
     public const string GET_TOKENS = 'tokens';
     public const string LOG_CONTEXT = 'LOG_CONTEXT';
     public const string DELAY_BY = 'DELAY_BY';
