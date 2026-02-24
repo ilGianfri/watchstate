@@ -300,6 +300,8 @@ export interface BackendUser {
   token?: string;
   /** Optional user type */
   type?: string;
+  /** Optional user uuid */
+  uuid?: string;
 }
 
 /**

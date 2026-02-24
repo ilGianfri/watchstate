@@ -41,6 +41,10 @@ final class Users
             $opts['tokens'] = true;
         }
 
+        if (null !== ($user = $params->get(Options::TARGET_USER, null))) {
+            $opts[Options::TARGET_USER] = $user;
+        }
+
         if (true === (bool) $params->get('raw', false)) {
             $opts[Options::RAW_RESPONSE] = true;
         }
